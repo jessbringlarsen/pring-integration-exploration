@@ -1,5 +1,6 @@
 package dk.bringlarsen.springintegration;
 
+import org.awaitility.Awaitility;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,6 +22,12 @@ import org.springframework.messaging.MessageHandler;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
+
 import static org.junit.Assert.assertTrue;
 
 @SpringBootTest
@@ -37,11 +44,8 @@ public class DemoApplicationTests {
 
     @Before
     public void setup() throws InterruptedException {
-        int n = 0;
-        while (n++ < 100 && !imapServer.isListening()) {
-            Thread.sleep(100);
-        }
-        assertTrue(n < 100);
+        Awaitility.waitAtMost(5, TimeUnit.SECONDS).until(imapServer::isListening);
+        assertTrue(imapServer.isListening());
     }
 
     @After
@@ -75,11 +79,11 @@ public class DemoApplicationTests {
         @Bean
         public IntegrationFlow incomming() {
             return IntegrationFlows.from(inChannel())
-                    .<String, String>transform(p -> p.toUpperCase())
-                    .filter(p -> filterCondition(p) , e -> e
+                    .<String, String>transform(String::toUpperCase)
+                    .filter(this::filterCondition, e -> e
                             .discardFlow(df -> df.channel(discardChannel())))
                     .wireTap(p -> p
-                            .transform(String.class, "Incomming: " ::concat)
+                            .transform(String.class, "Incomming: "::concat)
                             .handle(loggingHandler()))
                     .channel(outChannel())
                     .get();
@@ -87,13 +91,13 @@ public class DemoApplicationTests {
 
         private boolean filterCondition(Object payload) {
             return payload instanceof String &&
-                    !((String)payload).equalsIgnoreCase("test");
+                    !((String) payload).equalsIgnoreCase("test");
         }
 
         @Bean
         public IntegrationFlow outgoing() {
             return IntegrationFlows.from(outChannel())
-                    .transform(String.class, "outgoing channel: " ::concat)
+                    .transform(String.class, "outgoing channel: "::concat)
                     .handle(loggingHandler())
                     .get();
         }
@@ -101,7 +105,7 @@ public class DemoApplicationTests {
         @Bean
         public IntegrationFlow discarded() {
             return IntegrationFlows.from(discardChannel())
-                    .transform(String.class, "discarded channel: " ::concat)
+                    .transform(String.class, "discarded channel: "::concat)
                     .handle(loggingHandler())
                     .get();
         }
