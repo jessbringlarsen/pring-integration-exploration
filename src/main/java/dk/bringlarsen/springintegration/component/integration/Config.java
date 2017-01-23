@@ -1,38 +1,19 @@
-package dk.bringlarsen.springintegration.components.integration;
+package dk.bringlarsen.springintegration.component.integration;
 
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.integration.annotation.MessagingGateway;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.config.EnableIntegration;
 import org.springframework.integration.handler.LoggingHandler;
 import org.springframework.integration.handler.advice.AbstractRequestHandlerAdvice;
-import org.springframework.integration.handler.advice.RequestHandlerCircuitBreakerAdvice;
 import org.springframework.integration.handler.advice.RequestHandlerRetryAdvice;
-import org.springframework.integration.http.inbound.HttpRequestHandlingMessagingGateway;
-import org.springframework.integration.http.inbound.RequestMapping;
-import org.springframework.integration.router.ErrorMessageExceptionTypeRouter;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
-import org.springframework.messaging.MessageHandlingException;
-import org.springframework.retry.RetryPolicy;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.backoff.BackOffPolicy;
 import org.springframework.retry.backoff.ExponentialBackOffPolicy;
-import org.springframework.retry.backoff.FixedBackOffPolicy;
-import org.springframework.retry.backoff.SleepingBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
-import org.springframework.util.backoff.BackOff;
-import org.springframework.web.client.DefaultResponseErrorHandler;
-import org.springframework.web.client.ResponseErrorHandler;
-import org.springframework.web.client.RestTemplate;
-
-import javax.xml.ws.Response;
 
 @Configuration
 @EnableIntegration

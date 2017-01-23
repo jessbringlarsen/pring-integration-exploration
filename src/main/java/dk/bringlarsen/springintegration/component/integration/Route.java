@@ -1,21 +1,23 @@
-package dk.bringlarsen.springintegration.components.integration;
+package dk.bringlarsen.springintegration.component.integration;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.dsl.IntegrationFlows;
+import org.springframework.integration.dsl.amqp.Amqp;
 import org.springframework.integration.dsl.http.Http;
 import org.springframework.integration.handler.advice.AbstractRequestHandlerAdvice;
 import org.springframework.messaging.MessageHandler;
 import org.springframework.stereotype.Component;
 
-@Component
+@Configuration
 public class Route {
 
-    @Autowired
+  /*  @Autowired
     private DirectChannel inChannel;
 
     @Autowired
@@ -48,7 +50,7 @@ public class Route {
                 .handle(Http.outboundChannelAdapter("https://api.github.com/users/jessbringlarsen/test")
                         .requestFactory(clientHttpRequestFactory)
                         .httpMethod(HttpMethod.GET)
-                        .extractPayload(true)
+                        .extractPayload(false)
                         .expectedResponseType(String.class)
                         .charset("UTF-8"),
                         e -> e
@@ -78,4 +80,5 @@ public class Route {
                 .handle(loggingHandler)
                 .get();
     }
+    */
 }

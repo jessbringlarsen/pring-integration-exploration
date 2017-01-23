@@ -1,6 +1,5 @@
-package dk.bringlarsen.springintegration.components.integration;
+package dk.bringlarsen.springintegration.component.integration;
 
-import dk.bringlarsen.springintegration.service.FailingService;
 import org.awaitility.Awaitility;
 import org.junit.After;
 import org.junit.Before;
@@ -8,8 +7,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.core.MessagingTemplate;
 import org.springframework.integration.test.mail.TestMailServer;
 import org.springframework.messaging.MessageChannel;
@@ -22,7 +19,7 @@ import static org.junit.Assert.assertTrue;
 
 @SpringBootTest
 @RunWith(SpringRunner.class)
-@ContextConfiguration(classes = { Route.class, FailingService.class, Config.class, HttpGate.class})
+@ContextConfiguration(classes = { Route.class, Config.class})
 public class RouteTest {
 
     private static final TestMailServer.ImapServer imapServer = TestMailServer.imap(0);
