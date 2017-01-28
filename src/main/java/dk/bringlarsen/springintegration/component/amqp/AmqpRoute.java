@@ -6,16 +6,18 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.channel.PublishSubscribeChannel;
 import org.springframework.integration.config.EnableIntegration;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.dsl.IntegrationFlows;
 import org.springframework.integration.dsl.amqp.Amqp;
+import org.springframework.integration.dsl.http.Http;
 import org.springframework.integration.dsl.support.Transformers;
 import org.springframework.integration.handler.advice.AbstractRequestHandlerAdvice;
-import org.springframework.integration.handler.advice.RequestHandlerCircuitBreakerAdvice;
-import org.springframework.messaging.Message;
+import org.springframework.integration.handler.advice.RequestHandlerRetryAdvice;
+import org.springframework.integration.router.ErrorMessageExceptionTypeRouter;
 import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
@@ -52,22 +54,25 @@ public class AmqpRoute {
 
     @Bean
     public IntegrationFlow amqpIn(ConnectionFactory connectionFactory) {
-        return IntegrationFlows.from(Amqp.inboundAdapter(connectionFactory, "inQueue").errorChannel(errChannel()))
+        ErrorMessageExceptionTypeRouter errorMessageExceptionTypeRouter = new ErrorMessageExceptionTypeRouter();
+        errorMessageExceptionTypeRouter.setLoggingEnabled(true);
+        errorMessageExceptionTypeRouter.setDefaultOutputChannel(errChannel());
+
+        return IntegrationFlows.from(Amqp.inboundAdapter(connectionFactory, "inQueue"))
                 .transform(Transformers.objectToString())
-                .handle(Message.class, (p, h)-> pjService.execute(p))
-                .route("headers['channel']")
-               /* .handle(Http.outboundGateway(p -> p.getPayload())
-                                .httpMethod(HttpMethod.GET),
-                        e -> e.advice(retryAdvice())
-                ) .enrichHeaders(Collections.singletonMap("header!", "value!"))*/
-                .get();
+               // .handle(Message.class, (p, h) -> pjService.execute(p))
+                .handle(Http.outboundChannelAdapter(p->p.getPayload())
+                                .httpMethod(HttpMethod.GET)
+                                .expectedResponseType(String.class)
+                                .charset("UTF-8"),
+                        e->e.advice(retryAdvice()))
+                            .get();
     }
 
     @Bean
     public IntegrationFlow errorChannelIn(AmqpTemplate amqpTemplate) {
         return IntegrationFlows.from(errChannel())
-                .wireTap(w -> w.handle(h -> System.out.println("***" + h.getHeaders().get("cause"))))
-                .handle(Amqp.outboundGateway(amqpTemplate)
+                .handle(Amqp.outboundAdapter(amqpTemplate) // If gateway the message are not pulled off the in queue...
                         .routingKey("errorChannel"))
                 .get();
     }
@@ -75,23 +80,20 @@ public class AmqpRoute {
     @Bean
     public AbstractRequestHandlerAdvice retryAdvice() {
         SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy();
-        retryPolicy.setMaxAttempts(1);
+        retryPolicy.setMaxAttempts(3);
 
         ExponentialBackOffPolicy backOffPolicy = new ExponentialBackOffPolicy();
-        backOffPolicy.setInitialInterval(2000);
-        backOffPolicy.setMultiplier(5.0);
+        backOffPolicy.setInitialInterval(500);
+        backOffPolicy.setMultiplier(2.0);
 
         RetryTemplate retryTemplate = new RetryTemplate();
         retryTemplate.setRetryPolicy(retryPolicy);
         retryTemplate.setBackOffPolicy(backOffPolicy);
+        retryTemplate.setThrowLastExceptionOnExhausted(true);
 
-        RequestHandlerCircuitBreakerAdvice requestHandlerCircuitBreakerAdvice = new RequestHandlerCircuitBreakerAdvice();
-        requestHandlerCircuitBreakerAdvice.setThreshold(1);
-        requestHandlerCircuitBreakerAdvice.setHalfOpenAfter(2000);
-        return requestHandlerCircuitBreakerAdvice;
-      /*  RequestHandlerRetryAdvice requestHandlerRetryAdvice = new RequestHandlerRetryAdvice();
+        RequestHandlerRetryAdvice requestHandlerRetryAdvice = new RequestHandlerRetryAdvice();
         requestHandlerRetryAdvice.setRetryTemplate(retryTemplate);
+        requestHandlerRetryAdvice.setRecoveryCallback(new MyErrorMessageSendingRecover(errChannel()));
         return requestHandlerRetryAdvice;
-        */
     }
 }
