@@ -29,9 +29,11 @@ public class MyErrorMessageSendingRecover implements RecoveryCallback<Object> {
 
         } else if(cause instanceof HttpServerErrorException){
             Message<String> failedMessage = (Message<String>) context.getAttribute("message");
-            messagingTemplate.send(MessageBuilder.fromMessage(failedMessage)
+            Message<String> message = MessageBuilder.fromMessage(failedMessage)
                     .setHeader("cause", lastThrowable.getMessage())
-                    .build());
+                    .build();
+
+            messagingTemplate.send(message);
         }
         // TODO: handle other cases..
         return null;

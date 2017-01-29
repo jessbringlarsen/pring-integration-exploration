@@ -2,6 +2,7 @@ package dk.bringlarsen.springintegration.component.amqp;
 
 import dk.bringlarsen.springintegration.service.PJService;
 import org.springframework.amqp.core.AmqpTemplate;
+import org.springframework.amqp.core.MessageDeliveryMode;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +26,8 @@ import org.springframework.retry.support.RetryTemplate;
 @EnableIntegration
 @Configuration
 public class AmqpRoute {
+
+    private final String amqpInQueue = "inQueue";
 
     @Autowired
     private PJService pjService;
@@ -58,14 +61,13 @@ public class AmqpRoute {
         errorMessageExceptionTypeRouter.setLoggingEnabled(true);
         errorMessageExceptionTypeRouter.setDefaultOutputChannel(errChannel());
 
-        return IntegrationFlows.from(Amqp.inboundAdapter(connectionFactory, "inQueue"))
+        return IntegrationFlows.from(Amqp.inboundAdapter(connectionFactory, amqpInQueue))
                 .transform(Transformers.objectToString())
-               // .handle(Message.class, (p, h) -> pjService.execute(p))
-                .handle(Http.outboundChannelAdapter(p->p.getPayload())
+                .handle(Http.outboundChannelAdapter(p -> p.getPayload())
                                 .httpMethod(HttpMethod.GET)
                                 .expectedResponseType(String.class)
                                 .charset("UTF-8"),
-                        e->e.advice(retryAdvice()))
+                        e -> e.advice(retryAdvice()))
                             .get();
     }
 
@@ -73,6 +75,8 @@ public class AmqpRoute {
     public IntegrationFlow errorChannelIn(AmqpTemplate amqpTemplate) {
         return IntegrationFlows.from(errChannel())
                 .handle(Amqp.outboundAdapter(amqpTemplate) // If gateway the message are not pulled off the in queue...
+                        .defaultDeliveryMode(MessageDeliveryMode.PERSISTENT)
+                        .mappedRequestHeaders("cause")  // Map header to string so it is readable from the Rabbit gui
                         .routingKey("errorChannel"))
                 .get();
     }
@@ -89,7 +93,6 @@ public class AmqpRoute {
         RetryTemplate retryTemplate = new RetryTemplate();
         retryTemplate.setRetryPolicy(retryPolicy);
         retryTemplate.setBackOffPolicy(backOffPolicy);
-        retryTemplate.setThrowLastExceptionOnExhausted(true);
 
         RequestHandlerRetryAdvice requestHandlerRetryAdvice = new RequestHandlerRetryAdvice();
         requestHandlerRetryAdvice.setRetryTemplate(retryTemplate);
