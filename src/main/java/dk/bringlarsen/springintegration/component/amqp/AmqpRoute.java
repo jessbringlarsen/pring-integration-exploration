@@ -50,7 +50,7 @@ public class AmqpRoute {
 
     @Bean
     public ConnectionFactory connectionFactory() {
-        CachingConnectionFactory connectionFactory = new CachingConnectionFactory("somehost");
+        CachingConnectionFactory connectionFactory = new CachingConnectionFactory();
         connectionFactory.setUsername("guest");
         connectionFactory.setPassword("guest");
         connectionFactory.setHost("localhost");
