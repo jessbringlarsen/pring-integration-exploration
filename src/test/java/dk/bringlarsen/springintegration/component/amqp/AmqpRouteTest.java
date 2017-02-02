@@ -8,7 +8,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.channel.PublishSubscribeChannel;
@@ -26,7 +25,6 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 
 @SpringBootTest
 @RunWith(SpringRunner.class)
-@EnableAutoConfiguration
 @ContextConfiguration(classes = { AmqpRoute.class, PJService.class, PJServiceWorker.class})
 public class AmqpRouteTest {
 

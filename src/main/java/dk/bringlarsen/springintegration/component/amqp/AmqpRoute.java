@@ -1,9 +1,10 @@
 package dk.bringlarsen.springintegration.component.amqp;
 
 import dk.bringlarsen.springintegration.service.PJService;
-import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.core.MessageDeliveryMode;
+import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -48,9 +49,19 @@ public class AmqpRoute {
     }
 
     @Bean
-    public IntegrationFlow in(AmqpTemplate amqpTemplate) {
+    public ConnectionFactory connectionFactory() {
+        CachingConnectionFactory connectionFactory = new CachingConnectionFactory("somehost");
+        connectionFactory.setUsername("guest");
+        connectionFactory.setPassword("guest");
+        connectionFactory.setHost("localhost");
+
+        return connectionFactory;
+    }
+
+    @Bean
+    public IntegrationFlow in() {
         return IntegrationFlows.from(inChannel())
-                .handle(Amqp.outboundAdapter(amqpTemplate)
+                .handle(Amqp.outboundAdapter(new RabbitTemplate(connectionFactory()))
                     .routingKey("inQueue"))
                 .get();
     }
@@ -72,9 +83,9 @@ public class AmqpRoute {
     }
 
     @Bean
-    public IntegrationFlow errorChannelIn(AmqpTemplate amqpTemplate) {
+    public IntegrationFlow errorChannelIn() {
         return IntegrationFlows.from(errChannel())
-                .handle(Amqp.outboundAdapter(amqpTemplate) // If gateway the message are not pulled off the in queue...
+                .handle(Amqp.outboundAdapter(new RabbitTemplate(connectionFactory())) // If gateway the message are not pulled off the in queue...
                         .defaultDeliveryMode(MessageDeliveryMode.PERSISTENT)
                         .mappedRequestHeaders("cause")  // Map header to string so it is readable from the Rabbit gui
                         .routingKey("errorChannel"))
